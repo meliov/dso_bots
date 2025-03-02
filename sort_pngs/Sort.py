@@ -20,7 +20,7 @@ def rename_jpg_files(directory):
         print(f"Renamed {filename} to {temp_name}")
 
     # Step 2: Rename temporary files to final names
-    for index, temp_name in enumerate(temp_files, start=0):
+    for index, temp_name in enumerate(temp_files, start=418):
         new_name = f"img_{index}.jpg"
         temp_path = os.path.join(directory, temp_name)
         new_path = os.path.join(directory, new_name)
@@ -30,5 +30,5 @@ def rename_jpg_files(directory):
 
 
 # Example usage
-directory_path = "E:\\dev\\yolo-opencv-detector-main\\images"  # Replace with your directory path
+directory_path = "E:\\dev\\yolo-opencv-detector-main\\shuffled_images"  # Replace with your directory path
 rename_jpg_files(directory_path)
