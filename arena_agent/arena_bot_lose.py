@@ -31,15 +31,12 @@ class WindowCapture:
         self.hwnd = win32gui.FindWindow(None, window_name)
         if not self.hwnd:
             raise Exception('Window not found: {}'.format(window_name))
-
         window_rect = win32gui.GetWindowRect(self.hwnd)
         border_pixels = 8
         titlebar_pixels = 30
-
         # Calculate the absolute coordinates of the client area.
         self.left = window_rect[0] + border_pixels
         self.top = window_rect[1] + titlebar_pixels
-
         self.w = (window_rect[2] - window_rect[0]) - (border_pixels * 2)
         self.h = (window_rect[3] - window_rect[1]) - titlebar_pixels - border_pixels
         self.cropped_x = border_pixels
@@ -53,20 +50,16 @@ class WindowCapture:
         dataBitMap.CreateCompatibleBitmap(dcObj, self.w, self.h)
         cDC.SelectObject(dataBitMap)
         cDC.BitBlt((0, 0), (self.w, self.h), dcObj, (self.cropped_x, self.cropped_y), win32con.SRCCOPY)
-
         signedIntsArray = dataBitMap.GetBitmapBits(True)
         img = np.frombuffer(signedIntsArray, dtype='uint8')
         img.shape = (self.h, self.w, 4)
-
         dcObj.DeleteDC()
         cDC.DeleteDC()
         win32gui.ReleaseDC(self.hwnd, wDC)
         win32gui.DeleteObject(dataBitMap.GetHandle())
-
         # Remove the alpha channel and ensure contiguous array.
         img = img[..., :3]
         img = np.ascontiguousarray(img)
-
         return img
 
     def generate_image_dataset(self):
@@ -98,12 +91,10 @@ class ImageProcessor:
         self.ln = [self.ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
         self.W = img_size[0]
         self.H = img_size[1]
-
         with open('obj.names', 'r') as file:
             lines = file.readlines()
         for i, line in enumerate(lines):
             self.classes[i] = line.strip()
-
         # Colors for drawing boxes (expand if more than six classes).
         self.colors = [
             (0, 0, 255),
@@ -119,7 +110,6 @@ class ImageProcessor:
         self.net.setInput(blob)
         outputs = self.net.forward(self.ln)
         outputs = np.vstack(outputs)
-
         coordinates = self.get_coordinates(outputs, 0.5)
         self.draw_identified_objects(img, coordinates)
         return coordinates
@@ -128,7 +118,6 @@ class ImageProcessor:
         boxes = []
         confidences = []
         classIDs = []
-
         for output in outputs:
             scores = output[5:]
             classID = np.argmax(scores)
@@ -139,11 +128,9 @@ class ImageProcessor:
                 boxes.append([*p0, int(w), int(h)])
                 confidences.append(float(confidence))
                 classIDs.append(classID)
-
         indices = cv.dnn.NMSBoxes(boxes, confidences, conf, conf - 0.1)
         if len(indices) == 0:
             return []
-
         coordinates = []
         for i in indices.flatten():
             (x, y) = (boxes[i][0], boxes[i][1])
@@ -169,24 +156,20 @@ class ImageProcessor:
         cv.imshow('window', img)
 
 
-# Helper functions for clicking and enemy processing.
 def click_object(bbox, wincap):
-    # Calculate center of bounding box.
+    # Calculate bottom center point of the rectangle
     cx = bbox['x'] + bbox['w'] // 2
-    cy = bbox['y'] + bbox['h'] // 2
-    # Convert to absolute screen coordinates.
+    cy = bbox['y'] + bbox['h']  # Changed to use the bottom (down side)
     abs_x = wincap.left + cx
     abs_y = wincap.top + cy
     win32api.SetCursorPos((abs_x, abs_y))
-    # Simulate mouse click.
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    print(f"Clicked at ({abs_x}, {abs_y})")
+    print(f"Clicked at bottom center ({abs_x}, {abs_y})")
 
 
 def process_enemy(bbox, wincap):
-    # Move mouse to enemy_skeleton's center.
     cx = bbox['x'] + bbox['w'] // 2
     cy = bbox['y'] + bbox['h'] // 2
     abs_x = wincap.left + cx
@@ -194,29 +177,30 @@ def process_enemy(bbox, wincap):
     win32api.SetCursorPos((abs_x, abs_y))
     print(f"Pointed at enemy_skeleton at ({abs_x}, {abs_y})")
     time.sleep(0.05)
-    # Press keys in order: first '5' then '1'
     keyboard.press_and_release('5')
     time.sleep(0.05)
     keyboard.press_and_release('1')
     print("Pressed keys: 5 then 1")
 
 
-# --- State machine variables for movement ---
-initial_side = None  # Will be set to 'left' or 'right'
-movement_state = "init"  # Can be: init, phase1, phase2, phase3, enemy, reset
+# --- State machine variables for arena algorithm ---
+# States: "init" -> "phase1" -> "phase2" -> "phase3" -> "reset"
+initial_side = None  # "left" or "right"
+state = "init"
+first_round = True  # Only on first round will 'm' be double-clicked
 last_click_time = time.time()
 
 # Setup window capture and image processor.
 window_name = "Drakensang Online | Онлайн фентъзи играта за твоя браузър - DSO"  # Replace with your game's window title.
 cfg_file_name = "yolov4-tiny-custom.cfg"
 weights_file_name = "new.weights"
-
 wincap = WindowCapture(window_name)
 improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_name)
 
 print("Press F8 to toggle automation on/off. Press 'q' (in the OpenCV window) to quit.")
 
 while True:
+
     ss = wincap.get_screenshot()
     coordinates = improc.proccess_image(ss)
     key = cv.waitKey(1)
@@ -233,100 +217,45 @@ while True:
 
     current_time = time.time()
 
-    if automation_enabled:
-        # --- Rematch / Start Phase: Highest priority.
-        if 'start' in objects or 'rematch' in objects:
-            if current_time - last_click_time >= 0.5:
-                if 'start' in objects:
-                    click_object(objects['start'], wincap)
-                if 'rematch' in objects:
-                    click_object(objects['rematch'], wincap)
-                last_click_time = current_time
-            # Reset movement variables once these are visible.
-            initial_side = None
-            movement_state = "init"
-            # Skip the rest of the loop so movement does not interfere.
+    # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
+    if not automation_enabled:
+        time.sleep(0.05)
+        continue
+
+    # --- Global reset via start/rematch (keep original behavior) ---
+    if 'start' in objects or 'rematch' in objects:
+        if current_time - last_click_time >= 0.5:
+            if 'start' in objects:
+                click_object(objects['start'], wincap)
+            if 'rematch' in objects:
+                click_object(objects['rematch'], wincap)
+            last_click_time = current_time
+        # Reset arena state.
+        initial_side = None
+        state = "init"
+        first_round = True
+        print("Resetting state after start/rematch.")
+        time.sleep(0.05)
+        continue
+
+    if 'left' in objects and 'right' not in objects:
+        if current_time - last_click_time >= 0.5:
+            click_object(objects['left'], wincap)
             time.sleep(0.05)
             continue
+    # if 'right' in objects and 'left' not in objects:
+    #     if current_time - last_click_time >= 0.5:
+    #         click_object(objects['right'], wincap)
+    #         last_click_time = current_time
+    #         time.sleep(0.05)
+    #         continue
 
-        # --- Enemy Phase: If enemy_skeleton is detected.
-        if 'enemy_skeleton' in objects and movement_state != "enemy":
-            movement_state = "enemy"
-            if current_time - last_click_time >= 0.5:
-                process_enemy(objects['enemy_skeleton'], wincap)
-                last_click_time = current_time
-            # After processing enemy, go to reset state.
-            movement_state = "reset"
-            time.sleep(0.05)
-            continue
-
-        # --- Movement Phases ---
-        # 1. Initialization: determine starting side.
-        if initial_side is None:
-            if 'left' in objects:
-                initial_side = 'left'
-                movement_state = "phase1"  # Click left until center is detected.
-                print("Initial side set to left")
-            elif 'right' in objects:
-                initial_side = 'right'
-                movement_state = "phase1"  # Click right until center is detected.
-                print("Initial side set to right")
-
-        else:
-            # Phase 1: Click the starting side repeatedly until center appears.
-            if movement_state == "phase1":
-                if initial_side == 'left':
-                    if 'left' in objects and 'center' not in objects:
-                        if current_time - last_click_time >= 0.5:
-                            click_object(objects['left'], wincap)
-                            last_click_time = current_time
-                    if 'center' in objects:
-                        movement_state = "phase2"
-                        print("Transition to phase2 (center) from left")
-                elif initial_side == 'right':
-                    if 'right' in objects and 'center' not in objects:
-                        if current_time - last_click_time >= 0.5:
-                            click_object(objects['right'], wincap)
-                            last_click_time = current_time
-                    if 'center' in objects:
-                        movement_state = "phase2"
-                        print("Transition to phase2 (center) from right")
-
-            # Phase 2: Click center repeatedly until the opposite side appears.
-            elif movement_state == "phase2":
-                if 'center' in objects:
-                    if current_time - last_click_time >= 0.5:
-                        click_object(objects['center'], wincap)
-                        last_click_time = current_time
-                # Transition when the opposite side is detected.
-                if initial_side == 'left' and 'right' in objects:
-                    movement_state = "phase3"
-                    print("Transition to phase3 (right) from center")
-                elif initial_side == 'right' and 'left' in objects:
-                    movement_state = "phase3"
-                    print("Transition to phase3 (left) from center")
-
-            # Phase 3: Click the opposite side repeatedly until enemy_skeleton is detected.
-            elif movement_state == "phase3":
-                if initial_side == 'left':
-                    if 'right' in objects:
-                        if current_time - last_click_time >= 0.5:
-                            click_object(objects['right'], wincap)
-                            last_click_time = current_time
-                elif initial_side == 'right':
-                    if 'left' in objects:
-                        if current_time - last_click_time >= 0.5:
-                            click_object(objects['left'], wincap)
-                            last_click_time = current_time
-                # If enemy_skeleton appears, the enemy phase will trigger above.
-
-            # Reset Phase: After enemy processing, wait for the starting side to reappear to start a new cycle.
-            elif movement_state == "reset":
-                if (initial_side == 'left' and 'left' in objects) or (initial_side == 'right' and 'right' in objects):
-                    print("Resetting for next battle round.")
-                    initial_side = None
-                    movement_state = "init"
-
+    #attempt to reconnect secured
+    # win32api.SetCursorPos((950, 980)) for 1920x1080
+    win32api.SetCursorPos((683, 679))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    time.sleep(1)
 
 print('Finished.')
