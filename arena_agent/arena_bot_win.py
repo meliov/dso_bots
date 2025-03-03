@@ -9,10 +9,23 @@ import keyboard  # For global hotkey and simulating key presses
 # Global automation flag, toggled by F8
 automation_enabled = True
 
+# --- New Match Registration Helper Function ---
+def register_new_match_action(wincap):
+    keyboard.press_and_release('j')
+    time.sleep(1)
+    win32api.SetCursorPos((1330, 810))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    print("New match registered (key 'j' pressed and click at 1330,810)")
+
 def toggle_automation():
     global automation_enabled
+    # Immediately register a new match upon script startup.
     automation_enabled = not automation_enabled
     print("Automation", "enabled" if automation_enabled else "disabled")
+    if automation_enabled:
+        register_new_match_action(wincap)
 
 # Register F8 as the toggle hotkey.
 keyboard.add_hotkey('F8', toggle_automation)
@@ -175,14 +188,20 @@ def process_enemy(bbox, wincap):
     keyboard.press_and_release('5')
     time.sleep(0.05)
     keyboard.press_and_release('1')
-    print("Pressed keys: 5 then 1")
+    time.sleep(0.05)
+    keyboard.press_and_release('3')
+    print("Pressed keys: 5 then 1 and then 3")
+
 
 # --- State machine variables for arena algorithm ---
-# States: "init" -> "phase1" -> "phase2" -> "phase3" -> "reset"
 initial_side = None    # "left" or "right"
 state = "init"
 first_round = True     # Only on first round will 'm' be double-clicked
 last_click_time = time.time()
+
+# Additional variables for new match registration logic.
+previous_state = state
+last_state_change_time = time.time()
 
 # Setup window capture and image processor.
 window_name = "Drakensang Online | Онлайн фентъзи играта за твоя браузър - DSO"  # Replace with your game's window title.
@@ -192,9 +211,9 @@ wincap = WindowCapture(window_name)
 improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_name)
 
 print("Press F8 to toggle automation on/off. Press 'q' (in the OpenCV window) to quit.")
+register_new_match_action(wincap)
 
 while True:
-
     ss = wincap.get_screenshot()
     coordinates = improc.proccess_image(ss)
     key = cv.waitKey(1)
@@ -210,6 +229,18 @@ while True:
             objects[name] = coord
 
     current_time = time.time()
+
+    # Update last_state_change_time if the arena state has changed.
+    if state != previous_state:
+        last_state_change_time = current_time
+        previous_state = state
+
+    # --- Check if state hasn't changed for more than 5 minutes (300 seconds) ---
+    if current_time - last_state_change_time >= 300:
+        print("No state change detected for 5 minutes, registering new match.")
+        register_new_match_action(wincap)
+        last_state_change_time = current_time  # Reset timer after registration.
+
 
     # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
     if not automation_enabled:
@@ -231,8 +262,6 @@ while True:
         print("Resetting state after start/rematch.")
         time.sleep(0.05)
         continue
-
-
 
     # --- Priority: if enemy_skeleton is visible, process ONLY that.
     if 'enemy_skeleton' in objects:
@@ -303,7 +332,7 @@ while True:
             print("Reset complete (only initial side visible); new round starting.")
 
     time.sleep(0.05)
-    #securing new attempt to reconnect is clicked
+    # Securing new attempt to reconnect is clicked.
     win32api.SetCursorPos((950, 980))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
@@ -315,6 +344,4 @@ while True:
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
 
-#win - 1330x810
-#lose - 937x1145
 print('Finished.')

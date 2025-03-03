@@ -10,10 +10,23 @@ import keyboard  # For global hotkey and simulating key presses
 automation_enabled = True
 
 
+# --- New Match Registration Helper Function ---
+def register_new_match_action(wincap):
+    keyboard.press_and_release('j')
+    time.sleep(1)
+    win32api.SetCursorPos((937,561))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    print("New match registered (key 'j' pressed and click at 937,561)")
+
 def toggle_automation():
     global automation_enabled
+    # Immediately register a new match upon script startup.
     automation_enabled = not automation_enabled
     print("Automation", "enabled" if automation_enabled else "disabled")
+    if automation_enabled:
+        register_new_match_action(wincap)
 
 
 # Register F8 as the toggle hotkey.
@@ -190,6 +203,10 @@ state = "init"
 first_round = True  # Only on first round will 'm' be double-clicked
 last_click_time = time.time()
 
+# Additional variables for new match registration logic.
+previous_state = state
+last_state_change_time = time.time()
+
 # Setup window capture and image processor.
 window_name = "Drakensang Online | Онлайн фентъзи играта за твоя браузър - DSO"  # Replace with your game's window title.
 cfg_file_name = "yolov4-tiny-custom.cfg"
@@ -198,6 +215,7 @@ wincap = WindowCapture(window_name)
 improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_name)
 
 print("Press F8 to toggle automation on/off. Press 'q' (in the OpenCV window) to quit.")
+register_new_match_action(wincap)
 
 while True:
 
@@ -216,6 +234,17 @@ while True:
             objects[name] = coord
 
     current_time = time.time()
+
+    # Update last_state_change_time if the arena state has changed.
+    if state != previous_state:
+        last_state_change_time = current_time
+        previous_state = state
+
+    # --- Check if state hasn't changed for more than 5 minutes (300 seconds) ---
+    if current_time - last_state_change_time >= 300:
+        print("No state change detected for 5 minutes, registering new match.")
+        register_new_match_action(wincap)
+        last_state_change_time = current_time  # Reset timer after registration.
 
     # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
     if not automation_enabled:
@@ -243,12 +272,13 @@ while True:
             click_object(objects['left'], wincap)
             time.sleep(0.05)
             continue
-    # if 'right' in objects and 'left' not in objects:
-    #     if current_time - last_click_time >= 0.5:
-    #         click_object(objects['right'], wincap)
-    #         last_click_time = current_time
-    #         time.sleep(0.05)
-    #         continue
+    if 'right' in objects and 'left' not in objects:
+        win32api.SetCursorPos((656, 359))
+        # win32api.SetCursorPos((921, 507))#for 1920x1080
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+        time.sleep(0.05)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        continue
 
     #attempt to reconnect secured
     # win32api.SetCursorPos((950, 980)) for 1920x1080
@@ -259,3 +289,5 @@ while True:
     time.sleep(1)
 
 print('Finished.')
+#win - 1330x810
+#lose - 937x561
