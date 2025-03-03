@@ -314,7 +314,7 @@ while True:
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-        time.sleep(0.3)
 
-
+#win - 1330x810
+#lose - 937x1145
 print('Finished.')
