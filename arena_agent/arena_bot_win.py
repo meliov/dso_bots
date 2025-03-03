@@ -309,7 +309,7 @@ while True:
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
 
-    if initial_side != 'left':
+    if initial_side != 'left' and initial_side != 'init' and initial_side is not None:
         win32api.SetCursorPos((581, 545))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
         time.sleep(0.05)
