@@ -14,7 +14,7 @@ automation_enabled = True
 def register_new_match_action(wincap):
     keyboard.press_and_release('j')
     time.sleep(1)
-    win32api.SetCursorPos((937,561))
+    win32api.SetCursorPos((937,565))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
@@ -25,8 +25,6 @@ def toggle_automation():
     # Immediately register a new match upon script startup.
     automation_enabled = not automation_enabled
     print("Automation", "enabled" if automation_enabled else "disabled")
-    if automation_enabled:
-        register_new_match_action(wincap)
 
 
 # Register F8 as the toggle hotkey.
@@ -216,7 +214,6 @@ improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_na
 
 print("Press F8 to toggle automation on/off. Press 'q' (in the OpenCV window) to quit.")
 register_new_match_action(wincap)
-
 while True:
 
     ss = wincap.get_screenshot()
@@ -245,48 +242,50 @@ while True:
         print("No state change detected for 5 minutes, registering new match.")
         register_new_match_action(wincap)
         last_state_change_time = current_time  # Reset timer after registration.
-
-    # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
-    if not automation_enabled:
-        time.sleep(0.05)
-        continue
-
-    # --- Global reset via start/rematch (keep original behavior) ---
-    if 'start' in objects or 'rematch' in objects:
-        if current_time - last_click_time >= 0.5:
-            if 'start' in objects:
-                click_object(objects['start'], wincap)
-            if 'rematch' in objects:
-                click_object(objects['rematch'], wincap)
-            last_click_time = current_time
-        # Reset arena state.
-        initial_side = None
-        state = "init"
-        first_round = True
-        print("Resetting state after start/rematch.")
-        time.sleep(0.05)
-        continue
-
-    if 'left' in objects and 'right' not in objects:
-        if current_time - last_click_time >= 0.5:
-            click_object(objects['left'], wincap)
+    else:
+        # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
+        if not automation_enabled:
             time.sleep(0.05)
             continue
-    if 'right' in objects and 'left' not in objects:
-        win32api.SetCursorPos((656, 359))
-        # win32api.SetCursorPos((921, 507))#for 1920x1080
+
+        # --- Global reset via start/rematch (keep original behavior) ---
+        if 'start' in objects or 'rematch' in objects:
+            if current_time - last_click_time >= 0.5:
+                if 'start' in objects:
+                    click_object(objects['start'], wincap)
+                if 'rematch' in objects:
+                    click_object(objects['rematch'], wincap)
+                last_click_time = current_time
+            # Reset arena state.
+            initial_side = None
+            state = "init"
+            first_round = True
+            print("Resetting state after start/rematch.")
+            time.sleep(0.05)
+            continue
+
+        if 'left' in objects and 'right' not in objects:
+            if current_time - last_click_time >= 0.5:
+                click_object(objects['left'], wincap)
+                time.sleep(0.05)
+                state = None
+                continue
+        if 'right' in objects and 'left' not in objects:
+            win32api.SetCursorPos((656, 359))
+            # win32api.SetCursorPos((921, 507))#for 1920x1080
+            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+            time.sleep(0.05)
+            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+            state = None
+            continue
+
+        #attempt to reconnect secured
+        # win32api.SetCursorPos((950, 980)) for 1920x1080
+        win32api.SetCursorPos((683, 679))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-        continue
-
-    #attempt to reconnect secured
-    # win32api.SetCursorPos((950, 980)) for 1920x1080
-    win32api.SetCursorPos((683, 679))
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-    time.sleep(0.05)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    time.sleep(1)
+        time.sleep(1)
 
 print('Finished.')
 #win - 1330x810
