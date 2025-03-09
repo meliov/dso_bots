@@ -13,12 +13,14 @@ automation_enabled = True
 # --- New Match Registration Helper Function ---
 def register_new_match_action(wincap):
     keyboard.press_and_release('j')
-    time.sleep(1)
-    win32api.SetCursorPos((937,565))
+    time.sleep(2)
+    win32api.SetCursorPos((1330, 810))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    print("New match registered (key 'j' pressed and click at 937,561)")
+    time.sleep(0.05)
+    keyboard.press_and_release('j')
+    print("New match registered (key 'j' pressed and click at 1330,810)")
 
 def toggle_automation():
     global automation_enabled
@@ -280,8 +282,8 @@ while True:
             continue
 
         #attempt to reconnect secured
-        # win32api.SetCursorPos((950, 980)) for 1920x1080
-        win32api.SetCursorPos((683, 679))
+        win32api.SetCursorPos((950, 960))# for 1920x1080
+        # win32api.SetCursorPos((683, 679))
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
