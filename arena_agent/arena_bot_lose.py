@@ -273,7 +273,7 @@ while True:
                 state = None
                 continue
         if 'right' in objects and 'left' not in objects:
-            win32api.SetCursorPos((656, 359))
+            win32api.SetCursorPos((925, 495))
             # win32api.SetCursorPos((921, 507))#for 1920x1080
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
             time.sleep(0.05)
