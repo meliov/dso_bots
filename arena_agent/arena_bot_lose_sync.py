@@ -18,6 +18,25 @@ listen_port = 5001  # Port to receive timestamp from
 latest_received_text = None
 last_start_detection_time = 0.0
 
+
+# --- New Match Registration Helper Function ---
+def register_new_match_action(wincap):
+    time.sleep(0.5)
+    keyboard.press_and_release('j')
+    time.sleep(1)
+    win32api.SetCursorPos((1330, 810))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    time.sleep(0.5)
+    keyboard.press_and_release('j')
+
+    print("New match registered (key 'j' pressed and click at 1330,810)")
+
+
 # --- Listener Thread Function ---
 def timestamp_listener(listen_port):
     global latest_received_text
@@ -33,16 +52,22 @@ def timestamp_listener(listen_port):
             with conn:
                 data = conn.recv(1024).decode().strip()
                 if data:
-                    latest_received_text = data
-                    print(f"Received: {data}")
+                    if data == "register_match":
+                        register_new_match_action(wincap)
+                        print("register mach received")
+                    else:
+                        latest_received_text = data
+                        print(f"Received: {data}")
         except socket.timeout:
             continue
         except Exception as e:
             print("Listener error:", e)
 
+
 # Start the listener thread
 listener_thread = threading.Thread(target=timestamp_listener, args=(listen_port,), daemon=True)
 listener_thread.start()
+
 
 # --- Function to Send 'GO' ---
 def send_to_peer(message):
@@ -53,17 +78,6 @@ def send_to_peer(message):
     except Exception as e:
         print(f"Error sending message: {e}")
 
-# --- New Match Registration Helper Function ---
-def register_new_match_action(wincap):
-    keyboard.press_and_release('j')
-    time.sleep(2)
-    win32api.SetCursorPos((1330, 810))
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-    time.sleep(0.05)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    time.sleep(0.05)
-
-    print("New match registered (key 'j' pressed and click at 1330,810)")
 
 def toggle_automation():
     global automation_enabled
@@ -257,8 +271,28 @@ weights_file_name = "new.weights"
 wincap = WindowCapture(window_name)
 improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_name)
 
+
+def decline_reqeust():
+    win32api.SetCursorPos((1070, 630))
+    # win32api.SetCursorPos((921, 507))#for 1920x1080
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    win32api.SetCursorPos((1070, 630))
+    # win32api.SetCursorPos((921, 507))#for 1920x1080
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    win32api.SetCursorPos((1070, 630))
+    # win32api.SetCursorPos((921, 507))#for 1920x1080
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    state = None
+    print("decline request")
+
+
 print("Press F8 to toggle automation on/off. Press 'q' (in the OpenCV window) to quit.")
-register_new_match_action(wincap)
 while True:
 
     ss = wincap.get_screenshot()
@@ -282,91 +316,94 @@ while True:
         last_state_change_time = current_time
         previous_state = state
 
-    # --- Check if state hasn't changed for more than 5 minutes (300 seconds) ---
-    if current_time - last_state_change_time >= 300:
-        print("No state change detected for 5 minutes, registering new match.")
-        register_new_match_action(wincap)
-        last_state_change_time = current_time  # Reset timer after registration.
-    else:
-        # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
-        if not automation_enabled:
-            time.sleep(0.05)
-            continue
-        # --- Handle 'start' Button ---
-        if 'start' in objects:
-            last_start_detection_time = current_time
-
-        # --- Handle Received Timestamp ---
-        if latest_received_text:
-            try:
-                received_timestamp = float(latest_received_text)
-                time_diff = abs(received_timestamp - last_start_detection_time)
-                print("recieve and current")
-                print(received_timestamp)
-                print(last_start_detection_time)
-                print("diff")
-                print(time_diff)
-                latest_received_text = None
-                last_start_detection_time = 0
-
-                if 0.1 < time_diff <= 1.3:  # Adjust threshold as needed
-                    if 'start' in objects:
-                        time.sleep(0.05)
-                        click_object(objects['start'], wincap)
-                        last_click_time = current_time
-                        print("Sent 'GO' and clicked start.")
-                        initial_side = None
-                        send_to_peer("GO")
-
-            except ValueError:
-                print(f"Invalid data received: {latest_received_text}")
-                latest_received_text = None
-                last_start_detection_time = 0
-        # --- Timeout Handling ---
-        # if (time.time() - last_start_detection_time) >= 10:
-        #     print("No matching timestamp received. Registering new match.")
-        #     register_new_match_action(wincap)
-        #     last_start_detection_time = 0.0
-
-        # --- Global reset via start/rematch (keep original behavior) ---
-
-        if  'rematch' in objects:
-            if current_time - last_click_time >= 0.5:
-                if 'rematch' in objects:
-                    click_object(objects['rematch'], wincap)
-                last_click_time = current_time
-            # Reset arena state.
-            initial_side = None
-            state = "init"
-            first_round = True
-            print("Resetting state after start/rematch.")
-            time.sleep(0.05)
+    # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
+    if not automation_enabled:
+        time.sleep(0.05)
+        continue
+    # --- Handle 'start' Button ---
+    if 'start' in objects:
+        last_start_detection_time = current_time
+        if latest_received_text == None:
+            decline_reqeust()
+            last_start_detection_time = 0
             continue
 
-        if 'left' in objects and 'right' not in objects:
-            if current_time - last_click_time >= 0.5:
-                click_object(objects['left'], wincap)
-                time.sleep(0.05)
-                state = None
-                continue
-        if 'right' in objects and 'left' not in objects:
-            # win32api.SetCursorPos((656, 359))
-            win32api.SetCursorPos((925, 495))
-            # win32api.SetCursorPos((921, 507))#for 1920x1080
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    # --- Handle Received Timestamp ---
+    if latest_received_text:
+        try:
+            received_timestamp = float(latest_received_text)
+            threshold = 1  # Adjust threshold as needed
+            received_adjusted = received_timestamp + threshold
+            time_diff = abs(received_adjusted - last_start_detection_time)
+            print("recieve and current")
+            print(received_timestamp)
+            print(last_start_detection_time)
+            print("diff")
+            print(time_diff)
+
+            if 'start' in objects:
+                if 0.001 < time_diff <= 0.7 and received_adjusted >= last_start_detection_time and received_timestamp != 0 and last_start_detection_time != 0:
+                    time.sleep(0.35)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
+                    time.sleep(0.15)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
+                    last_click_time = current_time
+                    print("Sent 'GO' and clicked start.")
+                    initial_side = None
+                    send_to_peer("GO")
+            else:
+                register_new_match_action(wincap)  # unregister
+                print("unregister")
+                decline_reqeust()
+            latest_received_text = None
+            received_timestamp = 0
+            last_start_detection_time = 0
+
+        except ValueError:
+            print(f"Invalid data received: {latest_received_text}")
+            latest_received_text = None
+            last_start_detection_time = 0
+
+    # --- Global reset via start/rematch (keep original behavior) ---
+
+    if 'rematch' in objects:
+        if current_time - last_click_time >= 0.5:
+            if 'rematch' in objects:
+                click_object(objects['rematch'], wincap)
+            last_click_time = current_time
+        # Reset arena state.
+        print("Resetting state after start/rematch.")
+        time.sleep(0.05)
+        continue
+
+    if 'left' in objects and 'right' not in objects:
+        if current_time - last_click_time >= 0.5:
+            click_object(objects['left'], wincap)
             time.sleep(0.05)
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
             state = None
             continue
-
-        #attempt to reconnect secured
-        win32api.SetCursorPos((950, 960))# for 1920x1080
-        # win32api.SetCursorPos((683, 679))
+    if 'right' in objects and 'left' not in objects:
+        # win32api.SetCursorPos((656, 359))
+        win32api.SetCursorPos((950, 495))
+        # win32api.SetCursorPos((921, 507))#for 1920x1080
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-        time.sleep(1)
+        state = None
+        continue
+
+    # attempt to reconnect secured
+    win32api.SetCursorPos((950, 960))  # for 1920x1080
+    # win32api.SetCursorPos((683, 679))
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    time.sleep(0.05)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    time.sleep(1)
 
 print('Finished.')
-#win - 1330x810
-#lose - 937x561
+# win - 1330x810
+# lose - 937x561

@@ -57,15 +57,19 @@ def send_to_peer(message):
 
 # --- New Match Registration Helper Function ---
 def register_new_match_action(wincap):
+    time.sleep(0.5)
     keyboard.press_and_release('j')
     time.sleep(2)
+    send_to_peer(str("register_match"))
+    print("sending register_match")
     win32api.SetCursorPos((1330, 810))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-    time.sleep(0.05)
+    time.sleep(0.5)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    time.sleep(0.05)
+    time.sleep(0.5)
     keyboard.press_and_release('j')
     print("New match registered (key 'j' pressed and click at 1330,810)")
+
 
 def toggle_automation():
     global automation_enabled
@@ -235,7 +239,13 @@ def process_enemy(bbox, wincap):
     keyboard.press_and_release('5')
     time.sleep(0.05)
     keyboard.press_and_release('1')
-    print("Pressed keys: 5 then 1")
+    time.sleep(0.05)
+    keyboard.press_and_release('2')
+    time.sleep(0.05)
+    keyboard.press_and_release('3')
+    time.sleep(0.05)
+    keyboard.press_and_release('4')
+    print("Pressed keys: 5 then 1'then 3")
 
 
 # --- State machine variables for arena algorithm ---
@@ -281,7 +291,7 @@ while True:
         previous_state = state
 
     # --- Check if state hasn't changed for more than 5 minutes (300 seconds) ---
-    if current_time - last_state_change_time >= 200:
+    if current_time - last_state_change_time >= 45:
         print("No state change detected for 5 minutes, registering new match.")
         register_new_match_action(wincap)
         last_state_change_time = current_time  # Reset timer after registration.
