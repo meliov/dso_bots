@@ -1,4 +1,5 @@
 import numpy as np
+import pyautogui
 import win32gui, win32ui, win32con, win32api
 from PIL import Image
 import cv2 as cv
@@ -18,23 +19,32 @@ listen_port = 5001  # Port to receive timestamp from
 latest_received_text = None
 last_start_detection_time = 0.0
 
+def is_(color_name,x, y):
+    r, g, b = pyautogui.pixel(x, y)
+    is_red = r > 150
+    is_blue = b > 150
+    if color_name == "red":
+        return is_red
+    elif color_name == "blue":
+        return is_blue
 
+j_location = 1324, 788
+j_click = 1322, 805
 # --- New Match Registration Helper Function ---
 def register_new_match_action(wincap):
-    time.sleep(0.5)
-    keyboard.press_and_release('j')
+    print("check if its blue or red")
+    if not is_("blue", j_location[0], j_location[1]) and not is_("red", j_location[0], j_location[1]):
+        keyboard.press_and_release('j')
+        print("its not blue and not red so we click j")
     time.sleep(1)
-    win32api.SetCursorPos((1330, 810))
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-    time.sleep(0.05)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-    time.sleep(0.05)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    time.sleep(0.5)
+    while is_("blue", j_location[0], j_location[1]):
+        print("its blue! so we start")
+        win32api.SetCursorPos(j_click)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+        time.sleep(0.05)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        print("New match registered")
     keyboard.press_and_release('j')
-
-    print("New match registered (key 'j' pressed and click at 1330,810)")
 
 
 # --- Listener Thread Function ---
@@ -332,7 +342,7 @@ while True:
     if latest_received_text:
         try:
             received_timestamp = float(latest_received_text)
-            threshold = 1  # Adjust threshold as needed
+            threshold = 1.5  # Adjust threshold as needed
             received_adjusted = received_timestamp + threshold
             time_diff = abs(received_adjusted - last_start_detection_time)
             print("recieve and current")
@@ -342,7 +352,7 @@ while True:
             print(time_diff)
 
             if 'start' in objects:
-                if 0.001 < time_diff <= 0.7 and received_adjusted >= last_start_detection_time and received_timestamp != 0 and last_start_detection_time != 0:
+                if 0.001 < time_diff <= 0.9:
                     time.sleep(0.35)
                     click_object(objects['start'], wincap)
                     click_object(objects['start'], wincap)
