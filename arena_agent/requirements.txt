@@ -3,3 +3,4 @@ opencv-python
 Pillow
 pywin32
 keyboard
+pyautogui

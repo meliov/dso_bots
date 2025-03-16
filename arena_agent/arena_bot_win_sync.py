@@ -12,7 +12,7 @@ import threading
 # Global automation flag, toggled by F8
 automation_enabled = True
 
-peer_ip = "192.168.1.7"  # Replace with the other machine's IP
+peer_ip = "192.168.0.102" #"192.168.1.7"  # Replace with the other machine's IP
 peer_port = 5001  # Port to send timestamp to
 listen_port = 5002  # Port to receive timestamp from
 
@@ -73,10 +73,9 @@ def register_new_match_action(wincap):
     if not is_("blue",j_location[0], j_location[1]) and not is_("red",j_location[0], j_location[1]):
         keyboard.press_and_release('j')
         print("its not blue and not red so we click j")
-    time.sleep(2)
     send_to_peer(str("register_match"))
     print("sending register_match")
-
+    time.sleep(1)
     while is_("blue", j_location[0], j_location[1]):
         print("its blue! so we start")
         win32api.SetCursorPos(j_click)
@@ -436,5 +435,6 @@ while True:
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
             time.sleep(0.05)
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+            time.sleep(1)
 
 print('Finished.')

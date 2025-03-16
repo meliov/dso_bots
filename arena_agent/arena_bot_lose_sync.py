@@ -12,7 +12,7 @@ import threading
 # Global automation flag, toggled by F8
 automation_enabled = True
 
-peer_ip = "192.168.1.6"  # Replace with the other machine's IP
+peer_ip = "192.168.0.101"#"192.168.1.6"  # Replace with the other machine's IP
 peer_port = 5002  # Port to send timestamp to
 listen_port = 5001  # Port to receive timestamp from
 
@@ -43,6 +43,7 @@ def register_new_match_action(wincap):
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        time.sleep(0.3)
         print("New match registered")
     keyboard.press_and_release('j')
 
@@ -342,7 +343,7 @@ while True:
     if latest_received_text:
         try:
             received_timestamp = float(latest_received_text)
-            threshold = 1.5  # Adjust threshold as needed
+            threshold = 0  # Adjust threshold as needed
             received_adjusted = received_timestamp + threshold
             time_diff = abs(received_adjusted - last_start_detection_time)
             print("recieve and current")
@@ -352,18 +353,19 @@ while True:
             print(time_diff)
 
             if 'start' in objects:
-                if 0.001 < time_diff <= 0.9:
-                    time.sleep(0.35)
-                    click_object(objects['start'], wincap)
-                    click_object(objects['start'], wincap)
-                    click_object(objects['start'], wincap)
-                    click_object(objects['start'], wincap)
+                if 0.3 < time_diff <= 0.9:
                     time.sleep(0.15)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
+                    time.sleep(0.05)
                     click_object(objects['start'], wincap)
                     click_object(objects['start'], wincap)
                     last_click_time = current_time
                     print("Sent 'GO' and clicked start.")
                     initial_side = None
+                    time.sleep(2)
                     send_to_peer("GO")
             else:
                 register_new_match_action(wincap)  # unregister
@@ -396,15 +398,15 @@ while True:
             time.sleep(0.05)
             state = None
             continue
-    if 'right' in objects and 'left' not in objects:
-        # win32api.SetCursorPos((656, 359))
-        win32api.SetCursorPos((950, 495))
-        # win32api.SetCursorPos((921, 507))#for 1920x1080
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-        time.sleep(0.05)
-        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-        state = None
-        continue
+    # if 'right' in objects and 'left' not in objects:
+    #     # win32api.SetCursorPos((656, 359))
+    #     win32api.SetCursorPos((950, 495))
+    #     # win32api.SetCursorPos((921, 507))#for 1920x1080
+    #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+    #     time.sleep(0.05)
+    #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+    #     state = None
+    #     continue
 
     # attempt to reconnect secured
     win32api.SetCursorPos((950, 960))  # for 1920x1080
