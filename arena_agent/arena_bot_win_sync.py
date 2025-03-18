@@ -12,7 +12,7 @@ import threading
 # Global automation flag, toggled by F8
 automation_enabled = True
 
-peer_ip = "192.168.0.102" #"192.168.1.7"  # Replace with the other machine's IP
+peer_ip = "192.168.0.103" #"192.168.1.7"  # Replace with the other machine's IP
 peer_port = 5001  # Port to send timestamp to
 listen_port = 5002  # Port to receive timestamp from
 
@@ -35,9 +35,9 @@ def timestamp_listener(listen_port):
             conn, addr = s.accept()
             with conn:
                 data = conn.recv(1024).decode().strip()
-                if data:
+                print(f"Received: {data}")
+                if data == "GO":
                     latest_received_text = data
-                    print(f"Received: {data}")
         except socket.timeout:
             continue
         except Exception as e:
@@ -306,10 +306,13 @@ while True:
         previous_state = state
 
     # --- Check if state hasn't changed for more than 5 minutes (300 seconds) ---
-    if current_time - last_state_change_time >= 45:
+    if current_time - last_state_change_time >= 40:
         print("No state change detected for 5 minutes, registering new match.")
         register_new_match_action(wincap)
         last_state_change_time = current_time  # Reset timer after registration.
+        if 'left' in objects or 'right'  in objects:
+            state = "reset"
+            print("reseting state!j")
 
     else:
         # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
@@ -392,6 +395,8 @@ while True:
                     last_click_time = current_time
             if 'center' in objects:
                 state = "phase2"
+                time.sleep(0.05) #secure wolfj
+                keyboard.press_and_release('5')
                 print("Center detected; moving to phase2.")
 
         elif state == "phase2":
@@ -430,11 +435,14 @@ while True:
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
 
-        if initial_side != 'left' and initial_side != 'init' and initial_side is not None:
-            win32api.SetCursorPos((581, 545))
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-            time.sleep(0.05)
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-            time.sleep(1)
+        # if initial_side != 'left' and initial_side != 'init' and initial_side is not None:
+        #     win32api.SetCursorPos((581, 545))
+        #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+        #     time.sleep(0.05)
+        #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        #     time.sleep(1)jj
+        if initial_side is not None:
+            time.sleep(0.05)#secure movement
+            keyboard.press_and_release('3')
 
 print('Finished.')

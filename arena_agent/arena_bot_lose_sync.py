@@ -28,8 +28,8 @@ def is_(color_name,x, y):
     elif color_name == "blue":
         return is_blue
 
-j_location = 1324, 788
-j_click = 1322, 805
+j_location = 938, 558 # 1324, 788
+j_click = 939, 568 # 1322, 805
 # --- New Match Registration Helper Function ---
 def register_new_match_action(wincap):
     print("check if its blue or red")
@@ -282,19 +282,19 @@ weights_file_name = "new.weights"
 wincap = WindowCapture(window_name)
 improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_name)
 
-
+decline_location = 760,443 #1070, 630
 def decline_reqeust():
-    win32api.SetCursorPos((1070, 630))
+    win32api.SetCursorPos(decline_location)
     # win32api.SetCursorPos((921, 507))#for 1920x1080
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    win32api.SetCursorPos((1070, 630))
+    win32api.SetCursorPos(decline_location)
     # win32api.SetCursorPos((921, 507))#for 1920x1080
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    win32api.SetCursorPos((1070, 630))
+    win32api.SetCursorPos(decline_location)
     # win32api.SetCursorPos((921, 507))#for 1920x1080
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
@@ -327,6 +327,11 @@ while True:
         last_state_change_time = current_time
         previous_state = state
 
+    if current_time - last_state_change_time >= 300:
+        print("securing if no other players found ")
+        register_new_match_action(wincap)
+        last_state_change_time = current_time  # Reset timer after registration.
+
     # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
     if not automation_enabled:
         time.sleep(0.05)
@@ -353,13 +358,15 @@ while True:
             print(time_diff)
 
             if 'start' in objects:
-                if 0.3 < time_diff <= 0.9:
+                if 0.5 < time_diff < 1.1:
                     time.sleep(0.15)
                     click_object(objects['start'], wincap)
                     click_object(objects['start'], wincap)
                     click_object(objects['start'], wincap)
                     click_object(objects['start'], wincap)
-                    time.sleep(0.05)
+                    time.sleep(0.35)
+                    click_object(objects['start'], wincap)
+                    click_object(objects['start'], wincap)
                     click_object(objects['start'], wincap)
                     click_object(objects['start'], wincap)
                     last_click_time = current_time
@@ -371,6 +378,7 @@ while True:
                 register_new_match_action(wincap)  # unregister
                 print("unregister")
                 decline_reqeust()
+            send_to_peer("time diff: " + str(time_diff))
             latest_received_text = None
             received_timestamp = 0
             last_start_detection_time = 0
@@ -398,19 +406,18 @@ while True:
             time.sleep(0.05)
             state = None
             continue
-    # if 'right' in objects and 'left' not in objects:
-    #     # win32api.SetCursorPos((656, 359))
-    #     win32api.SetCursorPos((950, 495))
-    #     # win32api.SetCursorPos((921, 507))#for 1920x1080
-    #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-    #     time.sleep(0.05)
-    #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    #     state = None
-    #     continue
+    if 'right' in objects and 'left' not in objects:
+        win32api.SetCursorPos((656, 359))
+        #win32api.SetCursorPos((950, 495))
+        # win32api.SetCursorPos((921, 507))#for 1920x1080
+        time.sleep(0.05)
+        keyboard.press_and_release('3')
+        state = None
+        continue
 
     # attempt to reconnect secured
-    win32api.SetCursorPos((950, 960))  # for 1920x1080
-    # win32api.SetCursorPos((683, 679))
+    # win32api.SetCursorPos((950, 960))  # for 1920x1080
+    win32api.SetCursorPos((683, 679))
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
     time.sleep(0.05)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)

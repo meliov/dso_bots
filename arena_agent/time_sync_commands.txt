@@ -1,0 +1,27 @@
+1. Disable Firewall:
+netsh advfirewall set allprofiles state off
+netsh advfirewall show allprofiles
+
+2. Configure the NTP Server (192.168.0.101) - win PC
+-first start it
+net start w32time
+
+- then
+w32tm /config /manualpeerlist:"LOCAL" /syncfromflags:manual /reliable:YES /update
+net stop w32time && net start w32time
+
+-check status - You should see Stratum 1 and Source: Local CMOS Clock or an NTP Server.
+w32tm /query /status
+
+3. Configure the NTP Client (192.168.0.103) - lose pc
+-first start it
+net start w32time
+
+- then
+w32tm /config /manualpeerlist:"192.168.0.101" /syncfromflags:manual /update
+net stop w32time && net start w32time
+-- sometimes 2 times
+w32tm /resync
+
+- check status - Stratum should be higher than 1 (likely 2 or 3)
+w32tm /query /status
