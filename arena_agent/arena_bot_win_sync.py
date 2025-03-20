@@ -441,8 +441,9 @@ while True:
         #     time.sleep(0.05)
         #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
         #     time.sleep(1)jj
-        if initial_side is not None:
-            time.sleep(0.05)#secure movement
-            keyboard.press_and_release('3')
+
+        # if initial_side is not None:
+        #     time.sleep(0.05)#secure movement
+        #     keyboard.press_and_release('3')
 
 print('Finished.')
