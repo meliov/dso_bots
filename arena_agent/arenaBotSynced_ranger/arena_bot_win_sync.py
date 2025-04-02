@@ -1,23 +1,90 @@
 import numpy as np
+import pyautogui
 import win32gui, win32ui, win32con, win32api
 from PIL import Image
 import cv2 as cv
 import os
 import time
 import keyboard  # For global hotkey and simulating key presses
+import socket
+import threading
 
 # Global automation flag, toggled by F8
 automation_enabled = True
 
+peer_ip =  "192.168.1.7"# "192.168.0.103"  # Replace with the other machine's IP
+peer_port = 5001  # Port to send timestamp to
+listen_port = 5002  # Port to receive timestamp from
+
+# Global variables for communication
+latest_received_text = None
+awaiting_go_response = False
+sent_time = 0.0
+
+# --- Listener Thread Function ---
+def timestamp_listener(listen_port):
+    global latest_received_text
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("", listen_port))
+    s.listen(5)
+    s.settimeout(0.5)
+    print(f"Listener started on port {listen_port}")
+    while True:
+        try:
+            conn, addr = s.accept()
+            with conn:
+                data = conn.recv(1024).decode().strip()
+                print(f"Received: {data}")
+                if data == "GO":
+                    latest_received_text = data
+        except socket.timeout:
+            continue
+        except Exception as e:
+            print("Listener error:", e)
+
+# Start the listener thread
+listener_thread = threading.Thread(target=timestamp_listener, args=(listen_port,), daemon=True)
+listener_thread.start()
+
+# --- Function to Send Timestamp ---
+def send_to_peer(message):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((peer_ip, peer_port))
+            s.sendall(message.encode())
+    except Exception as e:
+        print(f"Error sending message: {e}")
+
+def is_(color_name,x, y):
+    r, g, b = pyautogui.pixel(x, y)
+    is_red = r > 150
+    is_blue = b > 150
+    if color_name == "red":
+        return is_red
+    elif color_name == "blue":
+        return is_blue
+
+j_location = 1327, 790
+j_click = 1330, 810
 # --- New Match Registration Helper Function ---
 def register_new_match_action(wincap):
+    print("check if its blue or red")
+    if not is_("blue",j_location[0], j_location[1]) and not is_("red",j_location[0], j_location[1]):
+        keyboard.press_and_release('j')
+        print("its not blue and not red so we click j")
+    send_to_peer(str("register_match"))
+    print("sending register_match")
+    time.sleep(1)
+    while is_("blue", j_location[0], j_location[1]):
+        print("its blue! so we start")
+        win32api.SetCursorPos(j_click)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+        time.sleep(0.05)
+        win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        print("New match registered")
     keyboard.press_and_release('j')
-    time.sleep(2)
-    win32api.SetCursorPos((1330, 810))
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-    time.sleep(0.05)
-    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-    print("New match registered (key 'j' pressed and click at 1330,810)")
+
 
 def toggle_automation():
     global automation_enabled
@@ -99,7 +166,7 @@ class ImageProcessor:
         self.ln = [self.ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
         self.W = img_size[0]
         self.H = img_size[1]
-        with open('obj.names', 'r') as file:
+        with open('../obj.names', 'r') as file:
             lines = file.readlines()
         for i, line in enumerate(lines):
             self.classes[i] = line.strip()
@@ -187,7 +254,13 @@ def process_enemy(bbox, wincap):
     keyboard.press_and_release('5')
     time.sleep(0.05)
     keyboard.press_and_release('1')
-    print("Pressed keys: 5 then 1")
+    time.sleep(0.05)
+    keyboard.press_and_release('2')
+    time.sleep(0.05)
+    keyboard.press_and_release('3')
+    time.sleep(0.05)
+    keyboard.press_and_release('4')
+    print("Pressed keys: 5 then 1'then 3")
 
 
 # --- State machine variables for arena algorithm ---
@@ -202,8 +275,8 @@ last_state_change_time = time.time()
 
 # Setup window capture and image processor.
 window_name = "Drakensang Online | Онлайн фентъзи играта за твоя браузър - DSO"  # Replace with your game's window title.
-cfg_file_name = "yolov4-tiny-custom.cfg"
-weights_file_name = "new.weights"
+cfg_file_name = "../yolov4-tiny-custom.cfg"
+weights_file_name = "../new.weights"
 wincap = WindowCapture(window_name)
 improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_name)
 
@@ -233,10 +306,13 @@ while True:
         previous_state = state
 
     # --- Check if state hasn't changed for more than 5 minutes (300 seconds) ---
-    if current_time - last_state_change_time >= 200:
+    if current_time - last_state_change_time >= 40:
         print("No state change detected for 5 minutes, registering new match.")
         register_new_match_action(wincap)
         last_state_change_time = current_time  # Reset timer after registration.
+        if 'left' in objects or 'right'  in objects:
+            state = "reset"
+            print("reseting state!j")
 
     else:
         # --- If automation is disabled, skip arena processing (but still allow start/rematch) ---
@@ -244,11 +320,33 @@ while True:
             time.sleep(0.05)
             continue
 
-        # --- Global reset via start/rematch (keep original behavior) ---
-        if 'start' in objects or 'rematch' in objects:
-            if current_time - last_click_time >= 0.5:
+        if 'start' in objects:
+            if not awaiting_go_response:
+                sent_timestamp = time.time()
+                send_to_peer(str(sent_timestamp))
+                sent_time = sent_timestamp
+                awaiting_go_response = True
+                print(f"Sent timestamp {sent_timestamp}, awaiting 'GO'.")
+
+            # --- Check for 'GO' Response or Timeout ---
+        if awaiting_go_response:
+            if latest_received_text == 'GO':
                 if 'start' in objects:
+                    time.sleep(0.05)
                     click_object(objects['start'], wincap)
+                    print("Received 'GO', clicked start.")
+                    last_click_time = current_time
+                awaiting_go_response = False
+                latest_received_text = None
+                initial_side = None
+            elif time.time() - sent_time >= 10:
+                print("No 'GO' received. Registering new match.")
+                register_new_match_action(wincap)
+                awaiting_go_response = False
+                latest_received_text = None
+        # --- Global reset via start/rematch (keep original behavior) ---
+        if  'rematch' in objects:
+            if current_time - last_click_time >= 0.5:
                 if 'rematch' in objects:
                     click_object(objects['rematch'], wincap)
                 last_click_time = current_time
@@ -297,6 +395,8 @@ while True:
                     last_click_time = current_time
             if 'center' in objects:
                 state = "phase2"
+                time.sleep(0.05) #secure wolfj
+                keyboard.press_and_release('5')
                 print("Center detected; moving to phase2.")
 
         elif state == "phase2":
@@ -335,10 +435,15 @@ while True:
         time.sleep(0.05)
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
 
-        if initial_side != 'left' and initial_side != 'init' and initial_side is not None:
-            win32api.SetCursorPos((581, 545))
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-            time.sleep(0.05)
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        # if initial_side != 'left' and initial_side != 'init' and initial_side is not None:
+        #     win32api.SetCursorPos((581, 545))
+        #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+        #     time.sleep(0.05)
+        #     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        #     time.sleep(1)jj
+
+        # if initial_side is not None:
+        #     time.sleep(0.05)#secure movement
+        #     keyboard.press_and_release('3')
 
 print('Finished.')

@@ -87,7 +87,7 @@ class ImageProcessor:
         self.ln = [self.ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
         self.W = img_size[0]
         self.H = img_size[1]
-        with open('obj.names', 'r') as file:
+        with open('../obj.names', 'r') as file:
             lines = file.readlines()
         for i, line in enumerate(lines):
             self.classes[i] = line.strip()
@@ -186,8 +186,8 @@ last_click_time = time.time()
 
 # Setup window capture and image processor.
 window_name = "Drakensang Online | Онлайн фентъзи играта за твоя браузър - DSO"  # Replace with your game's window title.
-cfg_file_name = "yolov4-tiny-custom.cfg"
-weights_file_name = "new.weights"
+cfg_file_name = "../yolov4-tiny-custom.cfg"
+weights_file_name = "../new.weights"
 wincap = WindowCapture(window_name)
 improc = ImageProcessor(wincap.get_window_size(), cfg_file_name, weights_file_name)
 
